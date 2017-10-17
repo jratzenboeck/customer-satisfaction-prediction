@@ -13,9 +13,9 @@ import java.util.Set;
 public class AttributeSelectionStrategyTests {
 
     private final AttributeSelectionStrategy strategy;
-    private static final int ITERATIONS = 3;
-    private static final int MIN_SET_SIZE = 3;
-    private static final int MAX_SET_SIZE = 3;
+    private static final int ITERATIONS = 10;
+    private static final int MIN_SET_SIZE = 2;
+    private static final int MAX_SET_SIZE = 10;
 
     public AttributeSelectionStrategyTests() {
         Instances dataSet = FileProcessingEngine.readDataSetFromFile("data/test/test.arff");
@@ -27,6 +27,9 @@ public class AttributeSelectionStrategyTests {
         List<Set<Attribute>> attributeSubSets = strategy.generateAttributeSubsets();
 
         Assert.assertEquals(ITERATIONS, attributeSubSets.size());
+        Assert.assertFalse(attributeSubSets
+                .stream()
+                .anyMatch(subSet -> subSet.size() < MIN_SET_SIZE || subSet.size() > MAX_SET_SIZE));
     }
 
     @Test

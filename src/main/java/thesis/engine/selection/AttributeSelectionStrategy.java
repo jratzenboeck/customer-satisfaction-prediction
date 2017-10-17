@@ -4,6 +4,7 @@ import weka.core.Attribute;
 import weka.core.Instances;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public abstract class AttributeSelectionStrategy {
@@ -27,17 +28,18 @@ public abstract class AttributeSelectionStrategy {
         Set<Attribute> bestAttributeSet = getBestAttributeSet(attributeSubSets);
         Set<Attribute> attributesToRemove = findAttributesToRemove(bestAttributeSet);
 
-        return (String[]) attributesToRemove.stream().map(Attribute::name).toArray();
+        return attributesToRemove.stream().map(Attribute::name).toArray(String[]::new);
     }
 
     List<Set<Attribute>> generateAttributeSubsets() {
         List<Set<Attribute>> attributeSubSets = new ArrayList<>();
+        ThreadLocalRandom random = ThreadLocalRandom.current();
 
         for (int i = 0; i < maxIterations; i++) {
             Set<Attribute> currentAttributeSet = new HashSet<>();
 
-            for (int j = minSetSize; j <= (int) (Math.random() * maxSetSize) + minSetSize; j++) {
-                int randomAttributeIndex = (int) (Math.random() * dataSet.numAttributes());
+            for (int j = 0; j <= random.nextInt(minSetSize, maxSetSize); j++) {
+                int randomAttributeIndex = random.nextInt(0, dataSet.numAttributes());
                 currentAttributeSet.add(dataSet.attribute(randomAttributeIndex));
             }
             attributeSubSets.add(currentAttributeSet);
