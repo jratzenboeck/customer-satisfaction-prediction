@@ -25,13 +25,37 @@ public class PreProcessingEngine {
         return dataSet;
     }
 
-    public void preProcess(String classAttributeName, String[] unneededAttributeNames, String[] replaceableAttributeNames,
+    public void preProcess(String[] unneededAttributeNames, String[] replaceableAttributeNames,
                            double minNormalizeValue, double maxNormalizeValue)  {
-        addClassAttributeToDataSet(dataSet.attribute(classAttributeName));
+        computeNewClassAttribute("satisfaction");
+        addClassAttributeToDataSet(dataSet.attribute(dataSet.numAttributes()));
         filterUnneededAttributes(unneededAttributeNames);
         replaceMissingAttributeValues(parseAttributeNames(replaceableAttributeNames));
         normalizeAttributeValues(minNormalizeValue, maxNormalizeValue);
-        normalizeClassAttributeValues();
+        //normalizeClassAttributeValues();
+        balanceDataSet();
+    }
+
+    public void computeNewClassAttribute(String name) {
+        List<String> classAttributeValues = new ArrayList<>();
+        classAttributeValues.add("unsatisfied");
+        classAttributeValues.add("neutral");
+        classAttributeValues.add("satisfied");
+        dataSet.insertAttributeAt(new Attribute(name, classAttributeValues), dataSet.numAttributes());
+
+        Collections.list(dataSet.enumerateInstances())
+                .forEach(instance -> {
+                    double rating = instance.value(getAttributeIndex("rating"));
+                    double recommendationScore = instance.value(getAttributeIndex("recommendation_score"));
+                    double overallSatisfaction = (rating + recommendationScore) / 2;
+                    if (overallSatisfaction < 5.0) {
+                        instance.setValue(dataSet.numAttributes() - 1, "unsatisfied");
+                    } else if (overallSatisfaction >= 6.5) {
+                        instance.setValue(dataSet.numAttributes() - 1, "satisfied");
+                    } else {
+                        instance.setValue(dataSet.numAttributes() - 1, "neutral");
+                    }
+                });
     }
 
     public void addClassAttributeToDataSet(Attribute classAttribute) {
@@ -51,7 +75,7 @@ public class PreProcessingEngine {
                 .collect(Collectors.toSet());
     }
 
-    public void filterUnneededAttributes(String[] attributeNames) {
+    void filterUnneededAttributes(String[] attributeNames) {
         Remove removeFilter = new Remove();
         removeFilter.setAttributeIndicesArray(getAttributeIndices(attributeNames));
 
@@ -71,7 +95,16 @@ public class PreProcessingEngine {
                 .map(index -> index--).toArray();
     }
 
-    public void replaceMissingAttributeValues(Set<Attribute> replaceableAttributes) {
+    private int getAttributeIndex(String attributeName) {
+        return Collections.list(dataSet.enumerateAttributes())
+                .stream()
+                .filter(attribute -> attribute.name().equalsIgnoreCase(attributeName))
+                .mapToInt(Attribute::index)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("An error occurred when trying to get attribute index for attribute " + attributeName));
+    }
+
+    void replaceMissingAttributeValues(Set<Attribute> replaceableAttributes) {
         Enumeration<Instance> instanceEnumeration = dataSet.enumerateInstances();
 
         while (instanceEnumeration.hasMoreElements()) {
@@ -86,7 +119,7 @@ public class PreProcessingEngine {
         }
     }
 
-    public void normalizeAttributeValues(double min, double max) {
+    void normalizeAttributeValues(double min, double max) {
         Collections.list(dataSet.enumerateInstances())
                 .forEach(instance -> Collections.list(instance.enumerateAttributes())
                         .stream()
@@ -102,9 +135,10 @@ public class PreProcessingEngine {
                 }));
     }
 
-    public void normalizeClassAttributeValues() {
+    void normalizeClassAttributeValues() {
         Collections.list(dataSet.enumerateInstances())
-                .forEach(instance -> instance.setClassValue(instance.classValue() >= 4 ? 1 : 0));
+                .forEach(instance -> instance.setClassValue(instance.classValue() < 4 ? 0 : 1));
+
         NumericToNominal numericToNominal = new NumericToNominal();
         numericToNominal.setAttributeIndices(String.valueOf(dataSet.classIndex() + 1)); // 1 based index
 
@@ -114,6 +148,22 @@ public class PreProcessingEngine {
         } catch (Exception e) {
             throw new RuntimeException("Could not make class attribute " + dataSet.classAttribute().name() + " nominal.", e);
         }
+    }
+
+    void balanceDataSet() {
+        int numInstancesDissatisfied = (int) filterInstancesByClassValue(0).count();
+        List<Instance> instancesSatisfied = filterInstancesByClassValue(1).collect(Collectors.toList());
+        Collections.shuffle(instancesSatisfied);
+        instancesSatisfied = instancesSatisfied.subList(0, numInstancesDissatisfied);
+        this.dataSet.removeIf(instance -> instance.classValue() == 1);
+        this.dataSet.addAll(instancesSatisfied);
+    }
+
+    private Stream<Instance> filterInstancesByClassValue(double classValue) {
+        return Collections
+                .list(dataSet.enumerateInstances())
+                .stream()
+                .filter(instance -> instance.classValue() == classValue);
     }
 
     private double getExtremeValueOfAttribute(Attribute attribute, ToDoubleFunction<DoubleStream> getExtremeValueOfStream) {

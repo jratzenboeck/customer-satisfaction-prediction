@@ -33,6 +33,17 @@ public class PreProcessingEngineTests {
     }
 
     @Test
+    public void computeNewClassAttribute() {
+        String classAttributeName = "satisfaction";
+        preProcessingEngine.computeNewClassAttribute(classAttributeName);
+        Attribute classAttribute = getDataSet().attribute(classAttributeName);
+        preProcessingEngine.addClassAttributeToDataSet(classAttribute);
+        Assert.assertEquals("satisfied", getDataSet().firstInstance().stringValue(classAttribute));
+        Assert.assertEquals("satisfied", getDataSet().instance(1).stringValue(classAttribute));
+        Assert.assertEquals("unsatisfied", getDataSet().instance(2).stringValue(classAttribute));
+    }
+
+    @Test
     public void testFilterUnneededAttributes() {
         int numAttributesBeforeFiltering = getDataSet().numAttributes();
         String[] attributesToFilter =  new String[] {"submit_date", "created_at"};
@@ -87,6 +98,22 @@ public class PreProcessingEngineTests {
 
         Assert.assertTrue(getDataSet().classAttribute().isNominal());
         Assert.assertFalse(isClassAttrValueOutsideRange);
+    }
+
+    @Test
+    public void testBalanceDataSet() {
+        preProcessingEngine.addClassAttributeToDataSet(getDataSet().attribute("rating"));
+        preProcessingEngine.balanceDataSet();
+
+        Assert.assertEquals(numberOfInstancesWithClassValue(1), numberOfInstancesWithClassValue(0));
+    }
+
+    private int numberOfInstancesWithClassValue(double classValue) {
+        return (int) Collections
+                .list(preProcessingEngine.getDataSet().enumerateInstances())
+                .stream()
+                .filter(instance -> instance.classValue() == classValue)
+                .count();
     }
 
     private boolean hasDataSetAttrValuesOutsideRange(Instances dataSet, Predicate<Attribute> filterCondition, Predicate<Double> valueCondition) {
