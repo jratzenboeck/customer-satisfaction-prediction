@@ -28,7 +28,7 @@ public class CorrelationBasedSelectionStrategy extends AttributeSelectionStrateg
         }
     }
 
-    CorrelationBasedSelectionStrategy(Instances dataSet, int minSetSize, int maxSetSize, int maxIterations) {
+    public CorrelationBasedSelectionStrategy(Instances dataSet, int minSetSize, int maxSetSize, int maxIterations) {
         super(dataSet, minSetSize, maxSetSize, maxIterations);
     }
 
