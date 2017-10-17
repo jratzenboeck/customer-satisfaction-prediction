@@ -18,8 +18,8 @@ public class AttributeSelectionEngine {
     public void filterUnsuitableAttributes(AttributeSelectionStrategy strategy) {
         String[] attributesToRemove = strategy.getAttributesToRemove();
 
-        PreProcessingEngine engine = new PreProcessingEngine(dataSet);
-        engine.filterUnneededAttributes(attributesToRemove);
-        this.dataSet = engine.getDataSet();
+        PreProcessingEngine preProcessingEngine = new PreProcessingEngine(dataSet);
+        preProcessingEngine.filterUnneededAttributes(attributesToRemove);
+        this.dataSet = preProcessingEngine.getDataSet();
     }
 }
